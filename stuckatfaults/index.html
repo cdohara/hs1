@@ -1,0 +1,1165 @@
+<title>Stuck-At Lab</title>
+<style>
+  :root {
+    --bg: #edf0ea;
+    --surface: #f8f9f6;
+    --surface2: #eff2ec;
+    --ink: #202a24;
+    --muted: #64716a;
+    --line: #cdd5cc;
+    --grid: #dfe5dc;
+    --accent: #0c7268;
+    --accent-ink: #f4f8f6;
+    --v0: #2563eb;
+    --v1: #b45309;
+    --vD: #be185d;
+    --vB: #7c3aed;
+    --vX: #8a958e;
+    --fault: #dc2626;
+    --ok: #15803d;
+    --bad: #dc2626;
+    --chip-ink: #ffffff;
+    --shadow: 0 1px 3px rgba(32,42,36,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131a17;
+      --surface: #1b2320;
+      --surface2: #222b27;
+      --ink: #e6ebe7;
+      --muted: #8fa098;
+      --line: #34403a;
+      --grid: #1f2823;
+      --accent: #3fc6b3;
+      --accent-ink: #0d1512;
+      --v0: #6ea8ff;
+      --v1: #f0a83f;
+      --vD: #f26fa8;
+      --vB: #b79bff;
+      --vX: #77837c;
+      --fault: #ff6b6b;
+      --ok: #4ade80;
+      --bad: #ff6b6b;
+      --chip-ink: #10130f;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131a17;
+    --surface: #1b2320;
+    --surface2: #222b27;
+    --ink: #e6ebe7;
+    --muted: #8fa098;
+    --line: #34403a;
+    --grid: #1f2823;
+    --accent: #3fc6b3;
+    --accent-ink: #0d1512;
+    --v0: #6ea8ff;
+    --v1: #f0a83f;
+    --vD: #f26fa8;
+    --vB: #b79bff;
+    --vX: #77837c;
+    --fault: #ff6b6b;
+    --ok: #4ade80;
+    --bad: #ff6b6b;
+    --chip-ink: #10130f;
+    --shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    margin: 0;
+    padding: 0 16px 64px;
+  }
+  code, .mono, table.ref { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  .wrap { max-width: 1020px; margin: 0 auto; }
+
+  header.site {
+    display: flex; align-items: center; gap: 14px;
+    padding: 26px 0 10px;
+  }
+  header.site svg { flex: none; color: var(--accent); }
+  header.site h1 { font-size: 1.5rem; font-weight: 650; margin: 0; letter-spacing: -.01em; }
+  header.site p { margin: 2px 0 0; color: var(--muted); font-size: .92rem; }
+
+  nav.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 14px 0 22px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  nav.tabs button {
+    font: inherit; font-size: .92rem; font-weight: 600;
+    background: transparent; color: var(--muted);
+    border: 1px solid transparent; border-radius: 7px;
+    padding: 7px 14px; cursor: pointer;
+  }
+  nav.tabs button:hover { color: var(--ink); background: var(--surface2); }
+  nav.tabs button.active { background: var(--accent); color: var(--accent-ink); }
+  nav.tabs button:focus-visible, .btn:focus-visible, .seg button:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  section.tab { display: none; }
+  section.tab.active { display: block; }
+
+  h2 { font-size: 1.15rem; font-weight: 650; margin: 30px 0 8px; }
+  h2:first-child { margin-top: 0; }
+  p { margin: 8px 0; }
+  .prose { max-width: 68ch; }
+  .prose li { margin: 4px 0; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin: 0 0 4px;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; box-shadow: var(--shadow); margin: 12px 0;
+  }
+  .schem {
+    background-color: var(--surface);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 20px 20px;
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px; overflow-x: auto; box-shadow: var(--shadow);
+  }
+  .schem svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+
+  table.ref { border-collapse: collapse; font-size: .88rem; margin: 10px 0; }
+  table.ref th, table.ref td { border: 1px solid var(--line); padding: 5px 12px; text-align: left; }
+  table.ref th { background: var(--surface2); font-weight: 600; }
+  table.ref td.sym { font-weight: 700; }
+  .tablewrap { overflow-x: auto; }
+
+  .btn {
+    font: inherit; font-size: .9rem; font-weight: 600;
+    background: var(--surface2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 7px 14px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 4px; }
+
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button {
+    font: inherit; font-size: .85rem; font-weight: 600;
+    background: var(--surface); color: var(--muted); border: none;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.active { background: var(--accent); color: var(--accent-ink); }
+
+  select {
+    font: inherit; font-size: .88rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px;
+  }
+
+  .score { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .85rem; color: var(--muted); margin-left: auto; }
+
+  .feedback { border-left: 3px solid var(--line); padding: 4px 14px; margin: 14px 0 4px; font-size: .93rem; }
+  .feedback.good { border-color: var(--ok); }
+  .feedback.bad { border-color: var(--bad); }
+  .feedback .verdict { font-weight: 700; }
+  .feedback.good .verdict { color: var(--ok); }
+  .feedback.bad .verdict { color: var(--bad); }
+  .feedback ul { margin: 6px 0; padding-left: 20px; }
+  .combos { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .85rem; color: var(--muted); }
+
+  .answers { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+  .answers .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .answers .lbl { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9rem; min-width: 9ch; }
+  .vchips { display: inline-flex; gap: 6px; }
+  .vchip {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .95rem; font-weight: 700;
+    width: 38px; height: 32px; border-radius: 7px;
+    border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+    cursor: pointer;
+  }
+  .vchip:hover { border-color: var(--accent); }
+  .vchip.sel { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+  .vchip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .vchip:disabled { cursor: default; opacity: .55; }
+
+  /* schematic svg pieces */
+  .gatebody { fill: var(--surface); stroke: var(--ink); stroke-width: 1.6; }
+  .gatelbl { fill: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; }
+  .wire { fill: none; stroke: var(--vX); stroke-width: 1.4; }
+  .wire.v0 { stroke: var(--v0); stroke-width: 2.2; }
+  .wire.v1 { stroke: var(--v1); stroke-width: 2.2; }
+  .wire.vD { stroke: var(--vD); stroke-width: 2.4; }
+  .wire.vB { stroke: var(--vB); stroke-width: 2.4; }
+  .dot { fill: var(--ink); }
+  .chip rect { fill: var(--surface); stroke: var(--vX); stroke-width: 1.3; stroke-dasharray: 2.5 2; }
+  .chip text { fill: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; text-anchor: middle; }
+  .chip.v0 rect { fill: var(--v0); stroke: var(--v0); stroke-dasharray: none; }
+  .chip.v1 rect { fill: var(--v1); stroke: var(--v1); stroke-dasharray: none; }
+  .chip.vD rect { fill: var(--vD); stroke: var(--vD); stroke-dasharray: none; }
+  .chip.vB rect { fill: var(--vB); stroke: var(--vB); stroke-dasharray: none; }
+  .chip.v0 text, .chip.v1 text, .chip.vD text, .chip.vB text { fill: var(--chip-ink); }
+  .chip.unknown rect { stroke: var(--accent); stroke-dasharray: none; }
+  .chip.unknown text { fill: var(--accent); }
+  .chip.clickable { cursor: pointer; }
+  .chip.clickable:hover rect { stroke-width: 2.2; }
+  .chip.clickable:focus { outline: none; }
+  .chip.clickable:focus rect { stroke: var(--accent); stroke-width: 2.2; }
+  .chip.given rect { stroke: var(--ink); stroke-width: 2; }
+  .chip.mark-ok rect { stroke: var(--ok); stroke-width: 2.6; }
+  .chip.mark-bad rect { stroke: var(--bad); stroke-width: 2.6; }
+  .pin-name { fill: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10.5px; }
+  .netname { fill: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10px; text-anchor: middle; }
+  .faultmark { stroke: var(--fault); stroke-width: 2.2; }
+  .faultlbl { fill: var(--fault); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10.5px; font-weight: 700; }
+  .frontier { fill: none; stroke: var(--vD); stroke-width: 2; stroke-dasharray: 5 3; }
+  .pipill rect { fill: var(--surface2); stroke: var(--line); stroke-width: 1.2; stroke-dasharray: none; }
+  .pipill .nm { fill: var(--ink); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; font-weight: 600; text-anchor: start; }
+
+  /* ATPG layout */
+  .atpg-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+  @media (max-width: 860px) { .atpg-grid { grid-template-columns: 1fr; } }
+  .steps { list-style: none; margin: 10px 0; padding: 0; font-size: .9rem; }
+  .steps li { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .steps li:last-child { border-bottom: none; }
+  .steps .st { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line);
+               display: inline-flex; align-items: center; justify-content: center;
+               font-size: .72rem; font-weight: 800; color: var(--muted); transform: translateY(3px); }
+  .steps li.done .st { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+  .steps .sd { color: var(--muted); font-size: .84rem; display: block; }
+  .faultline { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; font-size: 1.02rem; }
+  .faultline .sa { color: var(--fault); }
+  .covbar { height: 8px; border-radius: 4px; background: var(--surface2); border: 1px solid var(--line); overflow: hidden; margin: 8px 0 4px; }
+  .covbar div { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  @media (prefers-reduced-motion: reduce) { .covbar div { transition: none; } }
+  .covtext { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .8rem; color: var(--muted); }
+  .detected-banner { color: var(--ok); font-weight: 700; }
+
+  figure { margin: 16px 0; }
+  figcaption { font-size: .85rem; color: var(--muted); margin-top: 6px; max-width: 68ch; }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .8rem; color: var(--muted); margin: 8px 2px; }
+  .legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+  .hintline { color: var(--muted); font-size: .88rem; font-style: italic; }
+  kbd.val { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; padding: 0 5px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface2); }
+</style>
+
+<div class="wrap">
+  <header class="site">
+    <svg width="46" height="34" viewBox="0 0 46 34" role="img" aria-label="NAND gate logo">
+      <path d="M2 8 h8 M2 26 h8 M38 17 h6" stroke="currentColor" stroke-width="2" fill="none"/>
+      <path d="M10 3 h12 a14 14 0 0 1 0 28 h-12 z" fill="none" stroke="currentColor" stroke-width="2.4"/>
+      <circle cx="39.5" cy="17" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/>
+    </svg>
+    <div>
+      <h1>Stuck-At Lab</h1>
+      <p>Practice bench for stuck-at faults, forward &amp; backward implications, and test pattern generation.</p>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="learn" class="active">Learn</button>
+    <button data-tab="drill">Gate drills</button>
+    <button data-tab="imp">Implications</button>
+    <button data-tab="atpg">ATPG bench</button>
+  </nav>
+
+  <!-- ============ LEARN ============ -->
+  <section class="tab active" id="tab-learn">
+    <div class="prose">
+      <p class="eyebrow">The fault model</p>
+      <h2>Stuck-at faults</h2>
+      <p>The single stuck-at model assumes one wire in the circuit is permanently tied to a fixed
+      logic value: <strong>stuck-at-0</strong> (s-a-0) or <strong>stuck-at-1</strong> (s-a-1), while the rest of the
+      circuit works. A circuit with <em>n</em> wires has 2<em>n</em> such faults. A test vector <strong>detects</strong> a
+      fault when some primary output differs between the good circuit and the faulty circuit. That requires two things:</p>
+      <ul>
+        <li><strong>Excite (activate):</strong> drive the faulty wire to the <em>opposite</em> of its stuck value —
+        set it to 1 to catch s-a-0, to 0 to catch s-a-1.</li>
+        <li><strong>Propagate:</strong> sensitize a path so the difference travels to a primary output —
+        every gate along the path needs its other inputs at non-controlling values.</li>
+      </ul>
+
+      <p class="eyebrow">Notation</p>
+      <h2>Five-valued logic (Roth's D-calculus)</h2>
+      <p>ATPG algorithms simulate the good and faulty circuit at once. Each wire carries one of five values —
+      <kbd class="val">D</kbd> means "1 in the good circuit, 0 in the faulty one":</p>
+    </div>
+    <div class="tablewrap">
+    <table class="ref">
+      <tr><th>Symbol</th><th>Good circuit</th><th>Faulty circuit</th><th>Meaning</th></tr>
+      <tr><td class="sym">0</td><td>0</td><td>0</td><td>wire is 0 in both</td></tr>
+      <tr><td class="sym">1</td><td>1</td><td>1</td><td>wire is 1 in both</td></tr>
+      <tr><td class="sym">D</td><td>1</td><td>0</td><td>fault effect (excited s-a-0 shows D)</td></tr>
+      <tr><td class="sym">D&#772;</td><td>0</td><td>1</td><td>inverted fault effect (excited s-a-1 shows D&#772;)</td></tr>
+      <tr><td class="sym">X</td><td>?</td><td>?</td><td>not assigned yet</td></tr>
+    </table>
+    </div>
+    <p class="prose">Gates compute on these values componentwise: evaluate the good parts and the faulty parts
+    separately, then recombine. Inverting gates flip D to D&#772; (e.g. NAND(D,&#8201;1)&nbsp;=&nbsp;D&#772;), and fault effects can
+    cancel (XOR(D,&#8201;D)&nbsp;=&nbsp;0).</p>
+
+    <div class="prose">
+      <p class="eyebrow">Reasoning forward</p>
+      <h2>Forward implication</h2>
+      <p>From known gate inputs, deduce the output. The key idea is the <strong>controlling value</strong> —
+      the input value that fixes a gate's output on its own, no matter what the other inputs are:</p>
+    </div>
+    <div class="tablewrap">
+    <table class="ref">
+      <tr><th>Gate</th><th>Controlling value <em>c</em></th><th>Any input = <em>c</em> &rArr; output</th><th>All inputs = non-controlling &rArr; output</th></tr>
+      <tr><td>AND</td><td>0</td><td>0</td><td>1</td></tr>
+      <tr><td>NAND</td><td>0</td><td>1</td><td>0</td></tr>
+      <tr><td>OR</td><td>1</td><td>1</td><td>0</td></tr>
+      <tr><td>NOR</td><td>1</td><td>0</td><td>1</td></tr>
+      <tr><td>XOR</td><td>none</td><td>&mdash;</td><td>output known only when <em>every</em> input is known</td></tr>
+    </table>
+    </div>
+    <p class="prose">So AND(0,&#8201;X)&nbsp;=&nbsp;0 even though one input is unknown, but AND(1,&#8201;X)&nbsp;=&nbsp;X.
+    A fault effect propagates through a gate only when the other inputs sit at <em>non-controlling</em> values:
+    NAND(D,&#8201;1)&nbsp;=&nbsp;D&#772;, but NAND(D,&#8201;0)&nbsp;=&nbsp;1 — the 0 masks the fault.</p>
+
+    <div class="prose">
+      <p class="eyebrow">Reasoning backward</p>
+      <h2>Backward implication</h2>
+      <p>From a required output, deduce what the inputs <em>must</em> be. An implication only exists when the
+      inputs are uniquely determined:</p>
+    </div>
+    <div class="tablewrap">
+    <table class="ref">
+      <tr><th>Observation</th><th>Unique implication</th></tr>
+      <tr><td>AND out = 1 &nbsp;/&nbsp; NAND out = 0</td><td>every input = 1</td></tr>
+      <tr><td>OR out = 0 &nbsp;/&nbsp; NOR out = 1</td><td>every input = 0</td></tr>
+      <tr><td>AND out = 0 &nbsp;/&nbsp; NAND out = 1</td><td>nothing… <em>unless</em> all inputs but one are already 1 — then the last one = 0</td></tr>
+      <tr><td>OR out = 1 &nbsp;/&nbsp; NOR out = 0</td><td>nothing… <em>unless</em> all inputs but one are already 0 — then the last one = 1</td></tr>
+      <tr><td>NOT out = v</td><td>input = v&#772;</td></tr>
+      <tr><td>XOR out known, one input known</td><td>other input = out &oplus; input</td></tr>
+    </table>
+    </div>
+    <p class="prose">ATPG interleaves both directions: assignments imply forward through the logic, objectives
+    imply backward toward the primary inputs, and the process repeats until nothing changes (a <em>fixpoint</em>)
+    or a conflict forces backtracking.</p>
+
+    <div class="prose">
+      <p class="eyebrow">Putting it together</p>
+      <h2>How a test is built</h2>
+      <ol>
+        <li><strong>Excite:</strong> set the fault site to the opposite of the stuck value; it now carries D or D&#772;.</li>
+        <li><strong>Propagate:</strong> the <strong>D-frontier</strong> is the set of gates with a D/D&#772; input and an X output.
+        Pick one, set its other inputs non-controlling, and push the fault effect one gate closer to an output.</li>
+        <li><strong>Justify:</strong> use backward implications to find primary-input values that produce every
+        value you assumed. Conflicts mean backtracking and another choice.</li>
+      </ol>
+    </div>
+
+    <figure>
+      <div class="schem" id="learn-example"></div>
+      <figcaption><strong>Worked example — testing w s-a-0.</strong>
+      Excite: a=b=1 makes the good value of w equal 1, so the faulty wire carries D.
+      Propagate: the OR gate needs its other input at the non-controlling 0, so n&nbsp;=&nbsp;0, which implies backward
+      c&nbsp;=&nbsp;1 through the inverter. Vector (a,b,c)&nbsp;=&nbsp;(1,1,1) drives D to output y — fault detected.</figcaption>
+    </figure>
+
+    <div class="legend" id="legend-learn"></div>
+  </section>
+
+  <!-- ============ GATE DRILLS ============ -->
+  <section class="tab" id="tab-drill">
+    <div class="prose">
+      <p class="eyebrow">Single-gate reps</p>
+      <h2>Gate drills</h2>
+      <p>One gate, some values hidden. <strong>Forward:</strong> compute the output from the inputs.
+      <strong>Backward:</strong> from the output (and maybe one input), decide what each hidden input is
+      <em>forced</em> to be — or mark it <kbd class="val">?</kbd> if several values remain possible.</p>
+    </div>
+    <div class="btnrow">
+      <div class="seg" id="drill-mode">
+        <button data-m="mixed" class="active">Mixed</button>
+        <button data-m="fwd">Forward</button>
+        <button data-m="bwd">Backward</button>
+      </div>
+      <span class="score" id="drill-score"></span>
+    </div>
+    <div class="card">
+      <p class="mono" id="drill-q" style="margin:2px 0 10px; font-size:.95rem;"></p>
+      <div class="schem" id="drill-svg"></div>
+      <div class="answers" id="drill-answers"></div>
+      <div class="btnrow">
+        <button class="btn primary" id="drill-check">Check</button>
+        <button class="btn" id="drill-next">Next drill</button>
+      </div>
+      <div id="drill-feedback"></div>
+    </div>
+    <div class="legend" id="legend-drill"></div>
+  </section>
+
+  <!-- ============ IMPLICATIONS ============ -->
+  <section class="tab" id="tab-imp">
+    <div class="prose">
+      <p class="eyebrow">Whole-circuit reasoning</p>
+      <h2>Implication puzzles</h2>
+      <p>The outlined values are <strong>given</strong>. Click other wires to cycle
+      <kbd class="val">X</kbd>&rarr;<kbd class="val">0</kbd>&rarr;<kbd class="val">1</kbd> and fill in every value the givens
+      force — forward through gates <em>and</em> backward toward the inputs. Leave a wire at X when nothing pins it down.</p>
+    </div>
+    <div class="btnrow">
+      <select id="imp-circuit" aria-label="Choose circuit"></select>
+      <button class="btn" id="imp-new">New puzzle</button>
+      <button class="btn" id="imp-hint">Hint</button>
+      <span class="score" id="imp-score"></span>
+    </div>
+    <div class="schem" id="imp-svg"></div>
+    <div class="btnrow">
+      <button class="btn primary" id="imp-check">Check</button>
+      <button class="btn" id="imp-reveal">Reveal solution</button>
+      <span class="hintline" id="imp-hinttext"></span>
+    </div>
+    <div id="imp-feedback"></div>
+    <div class="legend" id="legend-imp"></div>
+  </section>
+
+  <!-- ============ ATPG BENCH ============ -->
+  <section class="tab" id="tab-atpg">
+    <div class="prose">
+      <p class="eyebrow">Full test generation</p>
+      <h2>ATPG bench</h2>
+      <p>A fault is planted in the circuit. Click the primary-input pills to build a test vector; the bench runs a
+      five-valued simulation live. Excite the fault, steer the D through the highlighted
+      <strong>D-frontier</strong>, and land it on an output. Detected faults accumulate toward full coverage.</p>
+    </div>
+    <div class="btnrow">
+      <select id="atpg-circuit" aria-label="Choose circuit"></select>
+      <select id="atpg-fault" aria-label="Choose fault"></select>
+      <button class="btn" id="atpg-random">Random undetected fault</button>
+      <button class="btn" id="atpg-resetpi">Reset inputs</button>
+    </div>
+    <div class="atpg-grid">
+      <div>
+        <div class="schem" id="atpg-svg"></div>
+        <div class="legend" id="legend-atpg"></div>
+      </div>
+      <div class="card" id="atpg-status"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/*ENGINE-START*/
+'use strict';
+const GATEDEF = {
+  AND:{base:'AND',inv:false}, NAND:{base:'AND',inv:true},
+  OR:{base:'OR',inv:false},  NOR:{base:'OR',inv:true},
+  XOR:{base:'XOR',inv:false},XNOR:{base:'XOR',inv:true},
+  NOT:{base:'BUF',inv:true}, BUF:{base:'BUF',inv:false},
+};
+// 3-valued eval; vals are 0 | 1 | null
+function eval3(type, vals){
+  const {base, inv} = GATEDEF[type];
+  let r;
+  if (base==='AND'){ r = vals.some(v=>v===0) ? 0 : (vals.some(v=>v===null) ? null : 1); }
+  else if (base==='OR'){ r = vals.some(v=>v===1) ? 1 : (vals.some(v=>v===null) ? null : 0); }
+  else if (base==='XOR'){ r = vals.some(v=>v===null) ? null : vals.reduce((a,b)=>a^b,0); }
+  else { r = vals[0]; }
+  if (inv && r!==null) r = 1-r;
+  return r;
+}
+const PAIR = {'0':[0,0],'1':[1,1],'D':[1,0],'B':[0,1],'X':[null,null]};
+function fromPair(g,f){ if(g===null||f===null) return 'X'; return g===f ? String(g) : (g===1?'D':'B'); }
+function eval5(type, vals){
+  return fromPair(eval3(type, vals.map(v=>PAIR[v][0])), eval3(type, vals.map(v=>PAIR[v][1])));
+}
+function inv5(v){ return {'0':'1','1':'0','D':'B','B':'D','X':'X'}[v]; }
+function injectFault(v, sa){ return fromPair(PAIR[v][0], sa); }
+
+function allNets(c){ return c.inputs.map(p=>p.id).concat(c.gates.map(g=>g.id)); }
+
+function simulate(c, assign, fault){
+  const val = {};
+  for (const pi of c.inputs){
+    let v = assign[pi.id] || 'X';
+    if (fault && fault.net===pi.id) v = injectFault(v, fault.sa);
+    val[pi.id] = v;
+  }
+  for (const g of c.gates){
+    let v = eval5(g.type, g.ins.map(i=>val[i]));
+    if (fault && fault.net===g.id) v = injectFault(v, fault.sa);
+    val[g.id] = v;
+  }
+  return val;
+}
+function dFrontier(c, val){
+  return c.gates.filter(g => val[g.id]==='X' && g.ins.some(i => val[i]==='D' || val[i]==='B'));
+}
+
+// 3-valued implication to fixpoint. given: {net:'0'|'1'}
+function implyFixpoint(c, given){
+  const val = {}; allNets(c).forEach(n=>val[n]='X');
+  let conflict = false, changed = true;
+  const set = (n,v)=>{
+    if (v==='X' || val[n]===v) return;
+    if (val[n]!=='X'){ conflict = true; return; }
+    val[n]=v; changed=true;
+  };
+  for (const n in given) val[n] = given[n];
+  while (changed && !conflict){
+    changed = false;
+    for (const g of c.gates){
+      const {base, inv} = GATEDEF[g.type];
+      // forward
+      const f = eval3(g.type, g.ins.map(i => val[i]==='X' ? null : +val[i]));
+      if (f!==null) set(g.id, String(f));
+      if (conflict) break;
+      const o = val[g.id];
+      if (o==='X') continue;
+      // backward: required output of the non-inverting base gate
+      const tb = inv ? (o==='1'?'0':'1') : o;
+      if (base==='BUF'){ set(g.ins[0], tb); }
+      else if (base==='AND'){
+        if (tb==='1'){ g.ins.forEach(i=>set(i,'1')); }
+        else if (!g.ins.some(i=>val[i]==='0')){
+          const xs = g.ins.filter(i=>val[i]==='X');
+          if (xs.length===1) set(xs[0],'0');
+          else if (xs.length===0) conflict = true;
+        }
+      } else if (base==='OR'){
+        if (tb==='0'){ g.ins.forEach(i=>set(i,'0')); }
+        else if (!g.ins.some(i=>val[i]==='1')){
+          const xs = g.ins.filter(i=>val[i]==='X');
+          if (xs.length===1) set(xs[0],'1');
+          else if (xs.length===0) conflict = true;
+        }
+      } else if (base==='XOR' && g.ins.length===2){
+        const [a,b] = g.ins;
+        if (val[a]!=='X' && val[b]==='X') set(b, String((+tb) ^ (+val[a])));
+        else if (val[b]!=='X' && val[a]==='X') set(a, String((+tb) ^ (+val[b])));
+      }
+      if (conflict) break;
+    }
+  }
+  return { val, conflict };
+}
+function faninClosure(c, nets){
+  const src = {}; c.gates.forEach(g => src[g.id] = g.ins);
+  const seen = new Set(), stack = [...nets];
+  while (stack.length){
+    const n = stack.pop();
+    for (const m of (src[n]||[])) if (!seen.has(m)){ seen.add(m); stack.push(m); }
+  }
+  return seen;
+}
+const DEFVALS = ['0','1','D','B'];
+// enumerate definite assignments to hidden inputs consistent with output `out`
+function consistentCombos(type, known, out){
+  const hidden = [];
+  known.forEach((v,i)=>{ if (v===null) hidden.push(i); });
+  const res = [];
+  const total = Math.pow(DEFVALS.length, hidden.length);
+  for (let k=0; k<total; k++){
+    const full = known.slice();
+    let t = k;
+    for (const hi of hidden){ full[hi] = DEFVALS[t % 4]; t = Math.floor(t/4); }
+    if (eval5(type, full) === out) res.push(full);
+  }
+  return res;
+}
+function forcedInputs(type, known, out){
+  const combos = consistentCombos(type, known, out);
+  const forced = known.map(()=>null);
+  known.forEach((v,i)=>{
+    if (v!==null) return;
+    const seen = new Set(combos.map(c=>c[i]));
+    forced[i] = (seen.size===1) ? [...seen][0] : '?';
+  });
+  return { forced, combos };
+}
+/*ENGINE-END*/
+
+// ---------- circuits ----------
+const CIRCUITS = {
+  warmup: {
+    key:'warmup', name:'Warmup · 3 gates', w:520, h:290, poX:470,
+    inputs:[{id:'a',x:64,y:80},{id:'b',x:64,y:140},{id:'c',x:64,y:220}],
+    gates:[
+      {id:'w', type:'AND', ins:['a','b'], x:210, y:110},
+      {id:'n', type:'NOT', ins:['c'],     x:210, y:220},
+      {id:'y', type:'OR',  ins:['w','n'], x:360, y:165},
+    ],
+    outputs:['y'],
+  },
+  fanout: {
+    key:'fanout', name:'Fanout · 4 gates', w:530, h:310, poX:480,
+    inputs:[{id:'a',x:64,y:70},{id:'b',x:64,y:150},{id:'c',x:64,y:230}],
+    gates:[
+      {id:'w', type:'AND',  ins:['a','b'], x:210, y:100},
+      {id:'p', type:'XOR',  ins:['b','c'], x:210, y:200},
+      {id:'y', type:'OR',   ins:['w','p'], x:370, y:130},
+      {id:'z', type:'NAND', ins:['w','c'], x:370, y:240},
+    ],
+    outputs:['y','z'],
+  },
+  c17: {
+    key:'c17', name:'ISCAS c17 · 6 NANDs', w:680, h:340, poX:640,
+    inputs:[
+      {id:'N1',x:64,y:60},{id:'N2',x:64,y:120},{id:'N3',x:64,y:180},
+      {id:'N6',x:64,y:240},{id:'N7',x:64,y:300},
+    ],
+    gates:[
+      {id:'N10', type:'NAND', ins:['N1','N3'],   x:212, y:90},
+      {id:'N11', type:'NAND', ins:['N3','N6'],   x:212, y:210},
+      {id:'N16', type:'NAND', ins:['N2','N11'],  x:372, y:150},
+      {id:'N19', type:'NAND', ins:['N11','N7'],  x:372, y:270},
+      {id:'N22', type:'NAND', ins:['N10','N16'], x:532, y:120},
+      {id:'N23', type:'NAND', ins:['N16','N19'], x:532, y:240},
+    ],
+    outputs:['N22','N23'],
+  },
+};
+
+// ---------- svg rendering ----------
+const SHOW = {'0':'0','1':'1','D':'D','B':'D̄','X':'X','?':'?'};
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function gateGeom(type, cx, cy, nIns){
+  const {base, inv} = GATEDEF[type];
+  let body = '', right, left;
+  if (base==='AND'){
+    body = `<path class="gatebody" d="M ${cx-28} ${cy-20} h 28 a 20 20 0 0 1 0 40 h -28 z"/>`;
+    right = cx+20; left = cx-28;
+  } else if (base==='OR' || base==='XOR'){
+    body = `<path class="gatebody" d="M ${cx-28} ${cy-20} Q ${cx-6} ${cy-20} ${cx+22} ${cy} Q ${cx-6} ${cy+20} ${cx-28} ${cy+20} Q ${cx-16} ${cy} ${cx-28} ${cy-20} Z"/>`;
+    if (base==='XOR') body += `<path class="gatebody" style="fill:none" d="M ${cx-34} ${cy-20} Q ${cx-22} ${cy} ${cx-34} ${cy+20}"/>`;
+    right = cx+22; left = (base==='XOR') ? cx-30 : cx-24;
+  } else { // BUF/NOT
+    body = `<path class="gatebody" d="M ${cx-20} ${cy-16} L ${cx+12} ${cy} L ${cx-20} ${cy+16} Z"/>`;
+    right = cx+12; left = cx-20;
+  }
+  if (inv){ body += `<circle class="gatebody" cx="${right+5}" cy="${cy}" r="5"/>`; right += 10; }
+  const pinYs = nIns===1 ? [cy] : nIns===2 ? [cy-10, cy+10] : [cy-12, cy, cy+12];
+  return { body, inPinX:left, outPinX:right, pinYs };
+}
+function chipSvg(cx, cy, v, opts){
+  const o = opts || {};
+  const cls = ['chip', v==='X' ? '' : 'v'+v, o.unknown?'unknown':'', o.click?'clickable':'',
+               o.given?'given':'', o.mark ? 'mark-'+o.mark : ''].filter(Boolean).join(' ');
+  const attr = o.click ? ` data-net="${esc(o.net)}" tabindex="0" role="button" aria-label="${esc(o.net)} = ${SHOW[v]}"` : '';
+  return `<g class="${cls}"${attr}>
+    <rect x="${cx-11}" y="${cy-9}" width="22" height="18" rx="4"/>
+    <text x="${cx}" y="${cy+4.5}">${o.unknown ? '?' : SHOW[v]}</text>
+  </g>`;
+}
+function renderCircuit(c, opts){
+  const o = Object.assign({values:{}, clickable:()=>false, given:new Set(), marks:{}, fault:null, frontier:[]}, opts);
+  const nets = allNets(c);
+  const geoms = {}; c.gates.forEach(g => geoms[g.id] = gateGeom(g.type, g.x, g.y, g.ins.length));
+  const srcPt = {};
+  c.inputs.forEach(pi => srcPt[pi.id] = [pi.x, pi.y]);
+  c.gates.forEach(g => srcPt[g.id] = [geoms[g.id].outPinX, g.y]);
+  const sinks = {}; nets.forEach(n => sinks[n] = []);
+  c.gates.forEach(g => g.ins.forEach((n,i) => sinks[n].push([geoms[g.id].inPinX, geoms[g.id].pinYs[i]])));
+  c.outputs.forEach(n => sinks[n].push([c.poX, srcPt[n][1]]));
+
+  let wires='', over='', bodies='';
+  nets.forEach((n, idx) => {
+    const [sx, sy] = srcPt[n];
+    const v = o.values[n] || 'X';
+    const mx = sx + 44 + (idx % 5) * 6;
+    const cls = 'wire' + (v==='X' ? '' : ' v'+v);
+    for (const [tx, ty] of sinks[n])
+      wires += `<path class="${cls}" d="M ${sx} ${sy} H ${mx} V ${ty} H ${tx}"/>`;
+    if (sinks[n].length > 1)
+      wires += `<circle class="dot" cx="${mx}" cy="${sy}" r="3"/>`;
+    // fault marker
+    if (o.fault && o.fault.net===n){
+      over += `<path class="faultmark" d="M ${sx+27} ${sy-5} l 8 10 M ${sx+35} ${sy-5} l -8 10"/>
+               <text class="faultlbl" x="${sx+31}" y="${sy+19}" text-anchor="middle">s-a-${o.fault.sa}</text>`;
+    }
+    const isPI = !!c.inputs.find(p=>p.id===n);
+    if (isPI){
+      const click = o.clickable(n);
+      const cls2 = ['pipill', click?'chip clickable':'chip'].join(' ');
+      const attr = click ? ` data-net="${esc(n)}" tabindex="0" role="button" aria-label="input ${esc(n)} = ${SHOW[v]}"` : '';
+      over += `<g class="${cls2}"${attr}>
+        <rect x="${sx-52}" y="${sy-12}" width="52" height="24" rx="6"/>
+        <text class="nm" x="${sx-44}" y="${sy+4.5}">${esc(n)}</text></g>`
+        + chipSvg(sx-14, sy, v, {click, net:n, given:o.given.has(n), mark:o.marks[n]});
+    } else {
+      over += chipSvg(sx+14, sy, v, {click:o.clickable(n), net:n, given:o.given.has(n), mark:o.marks[n]});
+      if (!(o.fault && o.fault.net===n))
+        over += `<text class="netname" x="${sx+14}" y="${sy+21}">${esc(n)}</text>`;
+    }
+  });
+  c.gates.forEach(g => {
+    bodies += geoms[g.id].body;
+    if (o.frontier.some(f=>f.id===g.id)){
+      bodies += `<rect class="frontier" x="${g.x-38}" y="${g.y-28}" width="80" height="56" rx="8"/>`;
+    }
+  });
+  let pos='';
+  c.outputs.forEach(n => {
+    const y = srcPt[n][1];
+    pos += `<text class="pin-name" x="${c.poX+6}" y="${y+3.5}">${esc(n)} &#9656;</text>`;
+  });
+  return `<svg viewBox="0 0 ${c.w} ${c.h}" width="${c.w}" role="img" aria-label="logic circuit ${esc(c.name)}">
+    ${wires}${bodies}${pos}${over}</svg>`;
+}
+
+// ---------- app state ----------
+const S = {
+  drill: { mode:'mixed', q:null, sel:{}, answered:false, score:0, total:0, streak:0 },
+  imp:   { circuit:'fanout', puzzle:null, user:{}, marks:{}, solved:0, revealed:false },
+  atpg:  { circuit:'c17', fault:null, assign:{}, cov:{} },
+};
+function loadCov(){
+  try { return JSON.parse(localStorage.getItem('stuckat-cov')||'{}'); } catch(e){ return {}; }
+}
+function saveCov(){
+  try { localStorage.setItem('stuckat-cov', JSON.stringify(S.atpg.cov)); } catch(e){}
+}
+S.atpg.cov = loadCov();
+
+const $ = id => document.getElementById(id);
+function rand(n){ return Math.floor(Math.random()*n); }
+function pick(arr){ return arr[rand(arr.length)]; }
+
+// ---------- tabs ----------
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active', x===b));
+  document.querySelectorAll('section.tab').forEach(s=>s.classList.toggle('active', s.id==='tab-'+b.dataset.tab));
+});
+
+// ---------- legends ----------
+function legendHtml(withD){
+  const items = [['v0','0'],['v1','1']];
+  if (withD) items.push(['vD','D = good 1 / faulty 0'],['vB','D̄ = good 0 / faulty 1']);
+  items.push(['vX','X = unassigned']);
+  return items.map(([c,t]) =>
+    `<span><span class="sw" style="background:var(--${c})"></span>${t}</span>`
+  ).join('') + (withD ? `<span><span class="sw" style="background:var(--fault)"></span>fault site</span>` : '');
+}
+$('legend-learn').innerHTML = legendHtml(true);
+$('legend-drill').innerHTML = legendHtml(true);
+$('legend-imp').innerHTML = legendHtml(false);
+$('legend-atpg').innerHTML = legendHtml(true);
+
+// ---------- learn example ----------
+(function(){
+  const c = CIRCUITS.warmup;
+  const fault = {net:'w', sa:0};
+  const values = simulate(c, {a:'1',b:'1',c:'1'}, fault);
+  $('learn-example').innerHTML = renderCircuit(c, { values, fault });
+})();
+
+// ---------- gate drills ----------
+const DRILL_GATES2 = ['AND','OR','NAND','NOR','XOR'];
+function genForward(){
+  for (let t=0; t<200; t++){
+    const type = pick(DRILL_GATES2.concat(['NOT','AND','OR','NAND','NOR']));
+    const n = (type==='NOT') ? 1 : (Math.random()<0.22 ? 3 : 2);
+    if (n===3 && type==='XOR') continue;
+    const dist = ['0','0','1','1','1','X','X','D','D','B'];
+    const ins = Array.from({length:n}, ()=>pick(dist));
+    if (ins.every(v=>v==='X')) continue;
+    return { dir:'fwd', type, ins, out: eval5(type, ins) };
+  }
+}
+function genBackward(){
+  for (let t=0; t<400; t++){
+    const type = pick(DRILL_GATES2.concat(['NOT']));
+    const n = (type==='NOT') ? 1 : 2;
+    const known = Array.from({length:n}, ()=>null);
+    if (n===2 && Math.random()<0.4) known[rand(2)] = pick(DEFVALS);
+    // choose a feasible, non-X output
+    const outs = new Set();
+    for (const o of ['0','1','D','B']){
+      if (consistentCombos(type, known, o).length) outs.add(o);
+    }
+    if (!outs.size) continue;
+    const out = pick([...outs]);
+    const { forced, combos } = forcedInputs(type, known, out);
+    // prefer drills where at least something is forced, but keep some "?" cases
+    const anyForced = forced.some(v => v!==null && v!=='?');
+    if (!anyForced && Math.random()<0.6) continue;
+    return { dir:'bwd', type, known, out, forced, combos };
+  }
+}
+function newDrill(){
+  const m = S.drill.mode;
+  const dir = m==='mixed' ? (Math.random()<0.5?'fwd':'bwd') : m;
+  S.drill.q = dir==='fwd' ? genForward() : genBackward();
+  S.drill.sel = {};
+  S.drill.answered = false;
+  renderDrill();
+}
+function drillSceneSvg(q){
+  const cx = 180, cy = 74;
+  const n = q.dir==='fwd' ? q.ins.length : q.known.length;
+  const geom = gateGeom(q.type, cx, cy, n);
+  const names = ['a','b','c'].slice(0,n);
+  let s = '';
+  geom.pinYs.forEach((py,i)=>{
+    const v = q.dir==='fwd' ? q.ins[i] : (q.known[i]===null ? 'X' : q.known[i]);
+    const unknown = q.dir==='bwd' && q.known[i]===null;
+    const cls = 'wire' + ((v==='X'||unknown) ? '' : ' v'+v);
+    s += `<path class="${cls}" d="M 96 ${py} H ${geom.inPinX}"/>`;
+    s += `<text class="pin-name" x="78" y="${py+3.5}">${names[i]}</text>`;
+    s += chipSvg(118, py, unknown?'X':v, {unknown});
+  });
+  const outUnknown = q.dir==='fwd';
+  const ov = outUnknown ? 'X' : q.out;
+  s += `<path class="wire${outUnknown?'':' v'+ov}" d="M ${geom.outPinX} ${cy} H 290"/>`;
+  s += `<text class="pin-name" x="296" y="${cy+3.5}">out</text>`;
+  s += chipSvg(258, cy, ov, {unknown: outUnknown});
+  s += geom.body;
+  s += `<text class="gatelbl" text-anchor="middle" x="${cx-4}" y="${cy+40}">${q.type}</text>`;
+  return `<svg viewBox="0 0 340 130" width="340" role="img" aria-label="${esc(q.type)} gate drill">${s}</svg>`;
+}
+function renderDrill(){
+  const q = S.drill.q;
+  $('drill-score').textContent = `${S.drill.score}/${S.drill.total} correct · streak ${S.drill.streak}`;
+  if (!q){ $('drill-q').textContent = 'Could not generate a drill.'; return; }
+  $('drill-q').innerHTML = q.dir==='fwd'
+    ? `Forward &mdash; what does this <strong>${q.type}</strong> output?`
+    : `Backward &mdash; the <strong>${q.type}</strong> output is <strong>${SHOW[q.out]}</strong>. What is each hidden input forced to be?`;
+  $('drill-svg').innerHTML = drillSceneSvg(q);
+  // answer rows
+  let rows = '';
+  const chipset = (rowKey, opts) => `<span class="vchips" data-row="${rowKey}">` +
+    opts.map(v=>`<button class="vchip${S.drill.sel[rowKey]===v?' sel':''}" data-v="${v}" ${S.drill.answered?'disabled':''}>${SHOW[v]}</button>`).join('') + `</span>`;
+  if (q.dir==='fwd'){
+    rows = `<div class="row"><span class="lbl">out =</span>${chipset('out', ['0','1','X','D','B'])}</div>`;
+  } else {
+    const names = ['a','b','c'];
+    q.known.forEach((v,i)=>{
+      if (v!==null) return;
+      rows += `<div class="row"><span class="lbl">${names[i]} must be</span>${chipset('in'+i, ['0','1','D','B','?'])}</div>`;
+    });
+    if (!rows) rows = '<p class="hintline">Nothing hidden — hit Check.</p>';
+  }
+  $('drill-answers').innerHTML = rows;
+  $('drill-feedback').innerHTML = '';
+}
+$('drill-answers').addEventListener('click', e=>{
+  const b = e.target.closest('.vchip'); if (!b || S.drill.answered) return;
+  const row = b.closest('.vchips').dataset.row;
+  S.drill.sel[row] = b.dataset.v;
+  b.closest('.vchips').querySelectorAll('.vchip').forEach(x=>x.classList.toggle('sel', x===b));
+});
+function explainForward(q){
+  const {base} = GATEDEF[q.type];
+  const insTxt = q.ins.map(v=>SHOW[v]).join(', ');
+  const hasDx = q.ins.concat([q.out]).some(v=>v==='D'||v==='B');
+  let why = '';
+  const ctrl = base==='AND' ? '0' : base==='OR' ? '1' : null;
+  if (ctrl && q.ins.some(v=>v===ctrl)){
+    why = `Input ${ctrl} is the controlling value for ${q.type} &mdash; it fixes the output regardless of the other input(s), even the X ones.`;
+  } else if (q.out==='X'){
+    why = `No controlling value is present and at least one input is X, so the output is undetermined.`;
+  } else if (base==='XOR'){
+    why = `XOR has no controlling value; with every input known the output is the XOR of the components.`;
+  } else {
+    why = `All inputs sit at the non-controlling value, so the output is determined.`;
+  }
+  let dcalc = '';
+  if (hasDx){
+    const g = q.ins.map(v=>PAIR[v][0]).join(',');
+    const f = q.ins.map(v=>PAIR[v][1]).join(',');
+    dcalc = `<p class="combos">D-calculus: good ${q.type}(${g}) = ${PAIR[q.out][0] ?? '?'} &nbsp;·&nbsp; faulty ${q.type}(${f}) = ${PAIR[q.out][1] ?? '?'} &nbsp;&rArr;&nbsp; ${SHOW[q.out]}</p>`;
+  }
+  return `<p>${q.type}(${insTxt}) = <strong>${SHOW[q.out]}</strong>. ${why}</p>${dcalc}`;
+}
+function explainBackward(q){
+  const names = ['a','b','c'];
+  let s = '';
+  const forcedTxt = [];
+  q.forced.forEach((v,i)=>{
+    if (v===null) return;
+    forcedTxt.push(v==='?'
+      ? `${names[i]} is <strong>not implied</strong> (several values possible)`
+      : `${names[i]} is forced to <strong>${SHOW[v]}</strong>`);
+  });
+  s += `<p>${forcedTxt.join('; ')}.</p>`;
+  if (q.known.length===2){
+    const list = q.combos.map(c=>`(${SHOW[c[0]]},${SHOW[c[1]]})`).join(' ');
+    s += `<p class="combos">Consistent input pairs (a,b): ${list || 'none'}</p>`;
+  } else if (q.known.length===1){
+    const list = q.combos.map(c=>SHOW[c[0]]).join(' ');
+    s += `<p class="combos">Consistent inputs: ${list}</p>`;
+  }
+  return s;
+}
+$('drill-check').addEventListener('click', ()=>{
+  const q = S.drill.q; if (!q || S.drill.answered) return;
+  let allPicked = true, correct = true, expl = '';
+  if (q.dir==='fwd'){
+    if (!S.drill.sel.out) allPicked = false;
+    else correct = (S.drill.sel.out === q.out);
+    expl = explainForward(q);
+  } else {
+    q.known.forEach((v,i)=>{
+      if (v!==null) return;
+      const sel = S.drill.sel['in'+i];
+      if (!sel){ allPicked = false; return; }
+      if (sel !== q.forced[i]) correct = false;
+    });
+    expl = explainBackward(q);
+  }
+  if (!allPicked){
+    $('drill-feedback').innerHTML = `<div class="feedback"><span class="verdict">Pick a value for every row first.</span></div>`;
+    return;
+  }
+  S.drill.answered = true;
+  S.drill.total++;
+  if (correct){ S.drill.score++; S.drill.streak++; } else { S.drill.streak = 0; }
+  $('drill-score').textContent = `${S.drill.score}/${S.drill.total} correct · streak ${S.drill.streak}`;
+  $('drill-feedback').innerHTML =
+    `<div class="feedback ${correct?'good':'bad'}"><span class="verdict">${correct?'Correct.':'Not quite.'}</span> ${expl}</div>`;
+  document.querySelectorAll('#drill-answers .vchip').forEach(b=>b.disabled = true);
+});
+$('drill-next').addEventListener('click', newDrill);
+$('drill-mode').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-m]'); if (!b) return;
+  S.drill.mode = b.dataset.m;
+  document.querySelectorAll('#drill-mode button').forEach(x=>x.classList.toggle('active', x===b));
+  newDrill();
+});
+
+// ---------- implication puzzles ----------
+function genImpPuzzle(c){
+  let best = null, bestScore = -1;
+  for (let t=0; t<400; t++){
+    const nets = allNets(c);
+    const gateNets = c.gates.map(g=>g.id);
+    const k = 1 + rand(2) + (Math.random()<0.25 ? 1 : 0);
+    const given = {};
+    const chosen = new Set();
+    for (let i=0; i<k; i++){
+      const n = (Math.random()<0.65) ? pick(gateNets) : pick(nets);
+      if (chosen.has(n)) continue;
+      chosen.add(n);
+      given[n] = pick(['0','1']);
+    }
+    if (!Object.keys(given).length) continue;
+    const { val, conflict } = implyFixpoint(c, given);
+    if (conflict) continue;
+    const implied = allNets(c).filter(n => val[n]!=='X' && !(n in given));
+    if (implied.length < 2) continue;
+    const closure = faninClosure(c, Object.keys(given));
+    const hasBwd = implied.some(n => closure.has(n));
+    const score = (hasBwd?100:0) + Math.min(implied.length, 8);
+    if (score > bestScore){ bestScore = score; best = { given, sol: val, nImplied: implied.length }; }
+    if (score >= 104) break;
+  }
+  return best;
+}
+function newImpPuzzle(){
+  const c = CIRCUITS[S.imp.circuit];
+  S.imp.puzzle = genImpPuzzle(c);
+  S.imp.user = {};
+  S.imp.marks = {};
+  S.imp.revealed = false;
+  $('imp-feedback').innerHTML = '';
+  $('imp-hinttext').textContent = '';
+  renderImp();
+}
+function renderImp(){
+  const c = CIRCUITS[S.imp.circuit];
+  const p = S.imp.puzzle;
+  $('imp-score').textContent = `${S.imp.solved} puzzle${S.imp.solved===1?'':'s'} solved`;
+  if (!p){ $('imp-svg').innerHTML = '<p style="padding:12px">Could not generate a puzzle — try again.</p>'; return; }
+  const values = {};
+  allNets(c).forEach(n => values[n] = (n in p.given) ? p.given[n] : (S.imp.user[n] || 'X'));
+  const given = new Set(Object.keys(p.given));
+  $('imp-svg').innerHTML = renderCircuit(c, {
+    values,
+    given,
+    marks: S.imp.marks,
+    clickable: n => !given.has(n),
+  });
+}
+function impClick(net){
+  const p = S.imp.puzzle; if (!p || (net in p.given)) return;
+  const cur = S.imp.user[net] || 'X';
+  S.imp.user[net] = cur==='X' ? '0' : cur==='0' ? '1' : 'X';
+  S.imp.marks = {};
+  $('imp-feedback').innerHTML = '';
+  renderImp();
+}
+$('imp-check').addEventListener('click', ()=>{
+  const c = CIRCUITS[S.imp.circuit], p = S.imp.puzzle; if (!p) return;
+  const lines = []; const marks = {};
+  let ok = true;
+  for (const n of allNets(c)){
+    if (n in p.given) continue;
+    const want = p.sol[n], got = S.imp.user[n] || 'X';
+    if (want === got){ if (want!=='X') marks[n] = 'ok'; continue; }
+    ok = false; marks[n] = 'bad';
+    if (want==='X') lines.push(`<li><code>${esc(n)}</code>: you set ${SHOW[got]}, but nothing implies a value there &mdash; leave it X.</li>`);
+    else if (got==='X') lines.push(`<li><code>${esc(n)}</code>: implied to be ${SHOW[want]}, but left X.</li>`);
+    else lines.push(`<li><code>${esc(n)}</code>: you set ${SHOW[got]}, implications force ${SHOW[want]}.</li>`);
+  }
+  S.imp.marks = marks;
+  renderImp();
+  if (ok){
+    if (!S.imp.revealed) S.imp.solved++;
+    $('imp-score').textContent = `${S.imp.solved} puzzle${S.imp.solved===1?'':'s'} solved`;
+    $('imp-feedback').innerHTML = `<div class="feedback good"><span class="verdict">Fixpoint reached.</span> Every implication found, and no over-assignment. Grab a new puzzle.</div>`;
+  } else {
+    $('imp-feedback').innerHTML = `<div class="feedback bad"><span class="verdict">Not there yet.</span><ul>${lines.join('')}</ul></div>`;
+  }
+});
+$('imp-reveal').addEventListener('click', ()=>{
+  const c = CIRCUITS[S.imp.circuit], p = S.imp.puzzle; if (!p) return;
+  allNets(c).forEach(n => { if (!(n in p.given)) S.imp.user[n] = p.sol[n]; });
+  S.imp.revealed = true;
+  S.imp.marks = {};
+  renderImp();
+  $('imp-feedback').innerHTML = `<div class="feedback"><span class="verdict">Solution shown.</span> Walk each gate and confirm you can reproduce every value from the rules.</div>`;
+});
+$('imp-hint').addEventListener('click', ()=>{
+  const p = S.imp.puzzle; if (!p) return;
+  $('imp-hinttext').textContent = `${p.nImplied} value${p.nImplied===1?' is':'s are'} implied beyond the givens.`;
+});
+$('imp-new').addEventListener('click', newImpPuzzle);
+$('imp-svg').addEventListener('click', e=>{
+  const g = e.target.closest('[data-net]'); if (g) impClick(g.dataset.net);
+});
+$('imp-svg').addEventListener('keydown', e=>{
+  if (e.key!=='Enter' && e.key!==' ') return;
+  const g = e.target.closest('[data-net]'); if (g){ e.preventDefault(); impClick(g.dataset.net); }
+});
+
+// ---------- ATPG bench ----------
+function faultList(c){
+  const out = [];
+  for (const n of allNets(c)) for (const sa of [0,1]) out.push({net:n, sa});
+  return out;
+}
+function faultKey(cKey, f){ return `${cKey}:${f.net}:${f.sa}`; }
+function atpgSetFault(f){
+  S.atpg.fault = f;
+  S.atpg.assign = {};
+  renderAtpg();
+}
+function renderFaultSelect(){
+  const c = CIRCUITS[S.atpg.circuit];
+  const sel = $('atpg-fault');
+  sel.innerHTML = faultList(c).map(f=>{
+    const k = faultKey(c.key, f);
+    const mark = S.atpg.cov[k] ? ' ✓' : '';
+    const cur = S.atpg.fault && S.atpg.fault.net===f.net && S.atpg.fault.sa===f.sa;
+    return `<option value="${f.net}:${f.sa}"${cur?' selected':''}>${esc(f.net)} s-a-${f.sa}${mark}</option>`;
+  }).join('');
+}
+function renderAtpg(){
+  const c = CIRCUITS[S.atpg.circuit];
+  const f = S.atpg.fault;
+  const values = simulate(c, S.atpg.assign, f);
+  const frontier = dFrontier(c, values);
+  const detectedAt = c.outputs.filter(n => values[n]==='D' || values[n]==='B');
+  const excited = values[f.net]==='D' || values[f.net]==='B';
+  const effectNets = allNets(c).filter(n => values[n]==='D' || values[n]==='B');
+
+  if (detectedAt.length){
+    const k = faultKey(c.key, f);
+    if (!S.atpg.cov[k]){ S.atpg.cov[k] = true; saveCov(); renderFaultSelect(); }
+  }
+  $('atpg-svg').innerHTML = renderCircuit(c, {
+    values, fault: f, frontier,
+    clickable: n => !!c.inputs.find(p=>p.id===n),
+  });
+
+  const needVal = f.sa===0 ? '1' : '0';
+  const showAs = f.sa===0 ? 'D' : 'D̄';
+  const total = faultList(c).length;
+  const done = faultList(c).filter(x => S.atpg.cov[faultKey(c.key,x)]).length;
+  const piTxt = c.inputs.map(p=>`${p.id}=${SHOW[S.atpg.assign[p.id]||'X']}`).join(' ');
+
+  let propTxt;
+  if (detectedAt.length) propTxt = `fault effect reached ${detectedAt.map(esc).join(', ')}`;
+  else if (frontier.length) propTxt = `D-frontier: ${frontier.map(g=>esc(g.id)).join(', ')} — set their other inputs non-controlling`;
+  else if (excited) propTxt = `fault effect is blocked — no D-frontier left; change some inputs`;
+  else propTxt = `nothing to propagate yet`;
+
+  $('atpg-status').innerHTML = `
+    <p class="eyebrow">Target fault</p>
+    <p class="faultline">${esc(f.net)} <span class="sa">s-a-${f.sa}</span></p>
+    <p style="font-size:.86rem; color:var(--muted); margin-top:2px;">Drive ${esc(f.net)} to ${needVal} in the good circuit; the wire then carries ${showAs}.</p>
+    <ol class="steps">
+      <li class="${excited?'done':''}"><span class="st">${excited?'✓':'1'}</span>
+        <span><strong>Excite</strong><span class="sd">${excited ? `${esc(f.net)} carries ${SHOW[values[f.net]]}` : `${esc(f.net)} is ${SHOW[values[f.net]]} — needs good-value ${needVal}`}</span></span></li>
+      <li class="${(detectedAt.length||effectNets.length>1)?'done':''}"><span class="st">${(detectedAt.length||effectNets.length>1)?'✓':'2'}</span>
+        <span><strong>Propagate</strong><span class="sd">${propTxt}</span></span></li>
+      <li class="${detectedAt.length?'done':''}"><span class="st">${detectedAt.length?'✓':'3'}</span>
+        <span><strong>Detect</strong><span class="sd">${detectedAt.length
+          ? `<span class="detected-banner">Detected!</span> vector ${esc(piTxt)}`
+          : `outputs: ${c.outputs.map(n=>`${esc(n)}=${SHOW[values[n]]}`).join(' ')}`}</span></span></li>
+    </ol>
+    <p class="eyebrow" style="margin-top:14px">Coverage — ${esc(c.name)}</p>
+    <div class="covbar"><div style="width:${(100*done/total).toFixed(1)}%"></div></div>
+    <p class="covtext">${done} / ${total} faults detected</p>
+    <div class="btnrow"><button class="btn" id="atpg-clearcov">Clear coverage</button></div>`;
+  $('atpg-clearcov').addEventListener('click', ()=>{
+    const c2 = CIRCUITS[S.atpg.circuit];
+    for (const x of faultList(c2)) delete S.atpg.cov[faultKey(c2.key,x)];
+    saveCov(); renderFaultSelect(); renderAtpg();
+  });
+}
+function atpgClick(net){
+  const c = CIRCUITS[S.atpg.circuit];
+  if (!c.inputs.find(p=>p.id===net)) return;
+  const cur = S.atpg.assign[net] || 'X';
+  S.atpg.assign[net] = cur==='X' ? '0' : cur==='0' ? '1' : 'X';
+  renderAtpg();
+}
+$('atpg-svg').addEventListener('click', e=>{
+  const g = e.target.closest('[data-net]'); if (g) atpgClick(g.dataset.net);
+});
+$('atpg-svg').addEventListener('keydown', e=>{
+  if (e.key!=='Enter' && e.key!==' ') return;
+  const g = e.target.closest('[data-net]'); if (g){ e.preventDefault(); atpgClick(g.dataset.net); }
+});
+$('atpg-fault').addEventListener('change', e=>{
+  const [net, sa] = e.target.value.split(':');
+  atpgSetFault({net, sa:+sa});
+});
+$('atpg-random').addEventListener('click', ()=>{
+  const c = CIRCUITS[S.atpg.circuit];
+  const fs = faultList(c);
+  const undet = fs.filter(f=>!S.atpg.cov[faultKey(c.key,f)]);
+  atpgSetFault(pick(undet.length?undet:fs));
+  renderFaultSelect();
+});
+$('atpg-resetpi').addEventListener('click', ()=>{ S.atpg.assign = {}; renderAtpg(); });
+
+// circuit selectors
+function fillCircuitSelect(sel, cur){
+  sel.innerHTML = Object.values(CIRCUITS).map(c=>
+    `<option value="${c.key}"${c.key===cur?' selected':''}>${esc(c.name)}</option>`).join('');
+}
+fillCircuitSelect($('imp-circuit'), S.imp.circuit);
+fillCircuitSelect($('atpg-circuit'), S.atpg.circuit);
+$('imp-circuit').addEventListener('change', e=>{ S.imp.circuit = e.target.value; newImpPuzzle(); });
+$('atpg-circuit').addEventListener('change', e=>{
+  S.atpg.circuit = e.target.value;
+  const c = CIRCUITS[S.atpg.circuit];
+  S.atpg.fault = faultList(c)[0];
+  S.atpg.assign = {};
+  renderFaultSelect(); renderAtpg();
+});
+
+// boot
+newDrill();
+newImpPuzzle();
+S.atpg.fault = faultList(CIRCUITS[S.atpg.circuit])[2];
+renderFaultSelect();
+renderAtpg();
+</script>
