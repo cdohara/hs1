@@ -16,6 +16,19 @@ aes = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(aes)
 
 
+def _print_verification(name, state, result, expected):
+    lines = [f"\n{name} VERIFICATION:"]
+    for label, values in (
+        ("Input", state),
+        ("Output", result),
+        ("Expected", expected),
+    ):
+        hex_state = "".join(f"{value:02X}" for value in values)
+        lines.append(f"{label:<13}: {hex_state}")
+    lines.append(f"Result       : {'PASS' if result == expected else 'FAIL'}")
+    print("\n".join(lines), flush=True)
+
+
 class ShiftRowTests(unittest.TestCase):
     def test_sequential_state(self):
         # Each group of four consecutive bytes is one column.
@@ -27,7 +40,9 @@ class ShiftRowTests(unittest.TestCase):
     def test_fips197_round_one(self):
         state = list(bytes.fromhex("d42711aee0bf98f1b8b45de51e415230"))
         expected = list(bytes.fromhex("d4bf5d30e0b452aeb84111f11e2798e5"))
-        self.assertEqual(aes.shiftrow(state), expected)
+        result = aes.shiftrow(state)
+        _print_verification("SHIFTROWS", state, result, expected)
+        self.assertEqual(result, expected)
 
     def test_zero_state(self):
         self.assertEqual(aes.shiftrow([0] * 16), [0] * 16)
@@ -47,7 +62,9 @@ class MixColumnTests(unittest.TestCase):
     def test_fips197_round_one(self):
         state = list(bytes.fromhex("d4bf5d30e0b452aeb84111f11e2798e5"))
         expected = list(bytes.fromhex("046681e5e0cb199a48f8d37a2806264c"))
-        self.assertEqual(aes.mixcolumn(state), expected)
+        result = aes.mixcolumn(state)
+        _print_verification("MIXCOLUMNS", state, result, expected)
+        self.assertEqual(result, expected)
 
     def test_each_column_is_mixed_independently(self):
         # A single 1 selects one column of the AES multiplication matrix.
@@ -92,4 +109,4 @@ class MixColumnTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
