@@ -1,9 +1,9 @@
-"""S-box and AES-128 key-expansion tests for 4.py.
+"""S-box, key-expansion, key-addition, and first-round tests for 4.py.
 
 Run with: python3 -m unittest -v test_4.py
 keyschedule() is expected to return 44 32-bit words (w0 through w43),
 with the input key read most-significant word first.
-Reference: FIPS 197, Table 4 and Appendix A.1.
+Reference: FIPS 197, Table 4 and Appendices A.1 and B.
 https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
 """
 
@@ -99,6 +99,63 @@ class KeyScheduleTests(unittest.TestCase):
         self.assertEqual(len(result), 44, "AES-128 needs 44 expanded words")
         self.assertEqual(result[:8], [0] * 4 + [0x62636363] * 4)
 
+
+class RoundTests(unittest.TestCase):
+    def test_addroundkey_known_states(self):
+        cases = (
+            (
+                "initial",
+                "3243F6A8885A308D313198A2E0370734",
+                EXPECTED_ROUND_KEYS[0],
+                "193DE3BEA0F4E22B9AC68D2AE9F84808",
+            ),
+            (
+                "round 1",
+                "046681E5E0CB199A48F8D37A2806264C",
+                EXPECTED_ROUND_KEYS[1],
+                "A49C7FF2689F352B6B5BEA43026A5049",
+            ),
+        )
+        for name, input_hex, key_hex, expected_hex in cases:
+            with self.subTest(stage=name):
+                state = list(bytes.fromhex(input_hex))
+                round_key = list(bytes.fromhex(key_hex))
+                original_state, original_key = state.copy(), round_key.copy()
+                result = aes.addroundkey(state, round_key)
+                self.assertEqual(result, list(bytes.fromhex(expected_hex)))
+                self.assertEqual(state, original_state)
+                self.assertEqual(round_key, original_key)
+
+    def test_perform_round_fips197_round_one(self):
+        state = list(bytes.fromhex("3243F6A8885A308D313198A2E0370734"))
+        key = int(EXPECTED_ROUND_KEYS[0], 16)
+        expected_hex = "A49C7FF2689F352B6B5BEA43026A5049"
+        result = aes.perform_round(state, key)
+        output_hex = "".join(f"{value:02X}" for value in result)
+        print(
+            "\nAES-128 FIRST ROUND VERIFICATION:\n"
+            f"Plaintext    : {bytes(state).hex().upper()}\n"
+            f"Original key : {key:032X}\n"
+            f"Round 1 key  : {EXPECTED_ROUND_KEYS[1]}\n"
+            f"Output       : {output_hex}\n"
+            f"Expected     : {expected_hex}\n"
+            f"Result       : {'PASS' if output_hex == expected_hex else 'FAIL'}",
+            flush=True,
+        )
+        self.assertEqual(result, list(bytes.fromhex(expected_hex)))
+
+    def test_perform_round_zero_plaintext_and_key(self):
+        # SubBytes gives 63 in every position. ShiftRows and MixColumns
+        # preserve that state; XOR with 62636363 per column gives 01000000.
+        self.assertEqual(aes.perform_round([0] * 16, 0), [1, 0, 0, 0] * 4)
+
+    def test_perform_round_does_not_modify_input(self):
+        state = list(bytes.fromhex("3243F6A8885A308D313198A2E0370734"))
+        original = state.copy()
+        result = aes.perform_round(state, int(EXPECTED_ROUND_KEYS[0], 16))
+        self.assertEqual(state, original)
+        self.assertIsInstance(result, list)
+        self.assertIsNot(result, state)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
